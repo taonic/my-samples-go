@@ -37,10 +37,15 @@ func (s *replayTestSuite) TearDownTest() {
 //
 // Or from Temporal Web UI. And you may need to change workflowType in the first event.
 func (s *replayTestSuite) TestReplayWorkflowHistoryFromFile() {
-	replayer := worker.NewWorkflowReplayer()
+	worker.EnableVerboseLogging(true)
+	options := worker.WorkflowReplayerOptions{EnableLoggingInReplay: true}
+	replayer, err := worker.NewWorkflowReplayerWithOptions(options)
+	if err != nil {
+		panic(err)
+	}
 
 	replayer.RegisterWorkflow(MyWorkflow)
 
-	err := replayer.ReplayWorkflowHistoryFromJSONFile(nil, "helloworld.json")
+	err = replayer.ReplayWorkflowHistoryFromJSONFile(nil, "helloworld.json")
 	require.NoError(s.T(), err)
 }
