@@ -59,29 +59,43 @@ func run() error {
 
 	// Run workflow
 	log.Print("Running workflow")
-	partitions, concurrentWorkflows, concurrentActivities := 20, 10, 1
-	then := time.Now()
-	run, err := c.ExecuteWorkflow(
-		ctx,
-		client.StartWorkflowOptions{
-			ID:        fmt.Sprintf("benchmark/partitions:%d/concurrency:%d", partitions, concurrentWorkflows),
-			TaskQueue: taskQueue,
-		},
-		MyGrandParentWorkflow,
-		partitions,
-		concurrentWorkflows,
-		concurrentActivities,
-	)
-	if err != nil {
-		return err
-	} else if err := run.Get(context.Background(), nil); err != nil {
-		return err
+	combinations := [][]int{
+		// partitions, size, activities per WF
+		{1, 200, 1},
+		{2, 100, 1},
+		{4, 50, 1},
+		{8, 25, 1},
+		{20, 10, 1},
+		{40, 5, 1},
 	}
-	log.Printf("Workflow done in %s", time.Since(then))
+	results := []string{}
+	for _, combination := range combinations {
+		partitions, partitionSize, activities := combination[0], combination[1], combination[2]
+		then := time.Now()
+		wfID := fmt.Sprintf("benchmark/partitions:%d/partitionSize:%d/activities:%d", partitions, partitionSize, activities)
+		run, err := c.ExecuteWorkflow(
+			ctx,
+			client.StartWorkflowOptions{ID: wfID, TaskQueue: taskQueue},
+			MyGrandParentWorkflow,
+			partitions,
+			partitionSize,
+			activities,
+		)
+		if err != nil {
+			return err
+		} else if err := run.Get(context.Background(), nil); err != nil {
+			return err
+		}
+		results = append(results, fmt.Sprintf("%s was done in %s", wfID, time.Since(then)))
+	}
+
+	for _, result := range results {
+		fmt.Println(result)
+	}
 	return nil
 }
 
-func MyGrandParentWorkflow(ctx workflow.Context, partitions, concurrentWorkflows, concurrentActivities int) (string, error) {
+func MyGrandParentWorkflow(ctx workflow.Context, partitions, partitionSize, activities int) (string, error) {
 	logger := workflow.GetLogger(ctx)
 
 	var futures []workflow.ChildWorkflowFuture
@@ -90,53 +104,53 @@ func MyGrandParentWorkflow(ctx workflow.Context, partitions, concurrentWorkflows
 			WorkflowID: "ParentWorkflow" + uuid.New().String(),
 		}
 		ctx = workflow.WithChildOptions(ctx, cwo)
-		future := workflow.ExecuteChildWorkflow(ctx, MyParentWorkflow, concurrentWorkflows, concurrentActivities)
+		future := workflow.ExecuteChildWorkflow(ctx, MyParentWorkflow, partitionSize, activities)
 		futures = append(futures, future)
 	}
 
+	var result string
 	for _, future := range futures {
-		var result string
 		err := future.Get(ctx, &result)
 		if err != nil {
 			return "", err
 		}
-		logger.Info("Child execution completed.", "Result", result)
+		logger.Debug("Child execution completed.", "Result", result)
 	}
 
 	return "", nil
 }
 
-func MyParentWorkflow(ctx workflow.Context, concurrentWorkflows, concurrentActivities int) (string, error) {
+func MyParentWorkflow(ctx workflow.Context, numWorkflows, numActivities int) (string, error) {
 	logger := workflow.GetLogger(ctx)
 	var futures []workflow.ChildWorkflowFuture
 
-	for i := 0; i < concurrentWorkflows; i++ {
+	for i := 0; i < numWorkflows; i++ {
 		cwo := workflow.ChildWorkflowOptions{
 			WorkflowID: "ChildWorkflow" + uuid.New().String(),
 		}
 		ctx = workflow.WithChildOptions(ctx, cwo)
-		future := workflow.ExecuteChildWorkflow(ctx, MyChildWorkflow, concurrentActivities)
+		future := workflow.ExecuteChildWorkflow(ctx, MyChildWorkflow, numActivities)
 		futures = append(futures, future)
 	}
 
+	var result string
 	for _, future := range futures {
-		var result string
 		err := future.Get(ctx, &result)
 		if err != nil {
 			return "", err
 		}
-		logger.Info("Child execution completed.", "Result", result)
+		logger.Debug("Child execution completed.", "Result", result)
 	}
 
 	return "", nil
 }
 
-func MyChildWorkflow(ctx workflow.Context, concurrentActivities int) (string, error) {
+func MyChildWorkflow(ctx workflow.Context, numActivities int) (string, error) {
 	logger := workflow.GetLogger(ctx)
 
 	var futures []workflow.Future
 
-	for i := 0; i < concurrentActivities; i++ {
+	for i := 0; i < numActivities; i++ {
 		ao := workflow.ActivityOptions{
 			StartToCloseTimeout: 10 * time.Second,
 		}
@@ -145,8 +159,8 @@ func MyChildWorkflow(ctx workflow.Context, concurrentActivities int) (string, er
 		futures = append(futures, future)
 	}
 
+	var result string
 	for _, future := range futures {
-		var result string
 		err := future.Get(ctx, &result)
 		if err != nil {
 			logger.Error("Activity failed.", "Error", err)
@@ -159,6 +173,6 @@ func MyChildWorkflow(ctx workflow.Context, concurrentActivities int) (string, er
 
 func MyActivity(ctx context.Context, i int) (string, error) {
 	logger := activity.GetLogger(ctx)
-	logger.Info("Activity", i)
+	logger.Debug("Activity", i)
 	return fmt.Sprintf("Hello %i!", i), nil
 }
