@@ -63,7 +63,6 @@ func run() error {
 func MyWorkflow(ctx workflow.Context) error {
 	logger := workflow.GetLogger(ctx)
 	defer func() {
-		info := workflow.GetInfo(ctx)
 		if errors.Is(ctx.Err(), workflow.ErrCanceled) {
 			logger.Info("Add clean up code here")
 		}
