@@ -67,6 +67,21 @@ func run() error {
 		}
 	}
 
+	// Wait for
+	time.Sleep(6 * time.Second)
+
+	run, err = c.SignalWithStartWorkflow(
+		ctx,
+		workflowID,
+		signalName,
+		"my belated message",
+		wo,
+		FifoWorkflow,
+	)
+	if err != nil {
+		return err
+	}
+
 	err = run.Get(context.Background(), nil)
 	if err != nil {
 		return err
@@ -97,10 +112,21 @@ func FifoWorkflow(ctx workflow.Context) (string, error) {
 		selector.Select(ctx)
 	}
 
+	// Process messages
 	for _, msg := range messages {
-		logger.Info("Received:", "msg", msg)
+		logger.Info("Received", "msg", msg)
+		workflow.Sleep(ctx, 1*time.Second)
 		// execute Activities
 	}
+
+	// Handle belated signals
+	messages = []string{}
+	for selector.HasPending() {
+		selector.Select(ctx)
+	}
+
+	// Continue as new by adding messages to a new execution
+	logger.Info("Belated signals", "msg", messages)
 
 	return "done", nil
 }
