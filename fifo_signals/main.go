@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -51,8 +52,9 @@ func run() error {
 	wo := client.StartWorkflowOptions{
 		TaskQueue: taskQueue,
 	}
-
 	var run client.WorkflowRun
+
+	// Send first batch
 	for i := 0; i < 5; i++ {
 		run, err = c.SignalWithStartWorkflow(
 			ctx,
@@ -68,18 +70,21 @@ func run() error {
 	}
 
 	// Wait for
-	time.Sleep(6 * time.Second)
+	time.Sleep(2 * time.Second)
 
-	run, err = c.SignalWithStartWorkflow(
-		ctx,
-		workflowID,
-		signalName,
-		"my belated message",
-		wo,
-		FifoWorkflow,
-	)
-	if err != nil {
-		return err
+	// Send second batch
+	for i := 0; i < 5; i++ {
+		run, err = c.SignalWithStartWorkflow(
+			ctx,
+			workflowID,
+			signalName,
+			fmt.Sprintf("belated message %d", i),
+			wo,
+			FifoWorkflow,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = run.Get(context.Background(), nil)
@@ -90,43 +95,46 @@ func run() error {
 	return nil
 }
 
-func FifoWorkflow(ctx workflow.Context) (string, error) {
-	logger := workflow.GetLogger(ctx)
+type Listener struct {
+	Messages []string
+}
+
+func (l *Listener) Listen(ctx workflow.Context) {
 	selector := workflow.NewSelector(ctx)
-	messages := []string{}
-	waiting := true
-
-	timerFuture := workflow.NewTimer(ctx, 5*time.Second)
-	selector.AddFuture(timerFuture, func(f workflow.Future) {
-		waiting = false
-	})
-
 	signalChn := workflow.GetSignalChannel(ctx, signalName)
 	selector.AddReceive(signalChn, func(c workflow.ReceiveChannel, more bool) {
 		var msg string
 		c.Receive(ctx, &msg)
-		messages = append(messages, msg)
+		l.Messages = append(l.Messages, msg)
 	})
 
-	for waiting || selector.HasPending() {
+	for {
 		selector.Select(ctx)
 	}
+}
 
-	// Process messages
-	for _, msg := range messages {
-		logger.Info("Received", "msg", msg)
-		workflow.Sleep(ctx, 1*time.Second)
-		// execute Activities
+func FifoWorkflow(ctx workflow.Context) (string, error) {
+	logger := workflow.GetLogger(ctx)
+	l := Listener{Messages: []string{}}
+	workflow.Go(ctx, l.Listen)
+
+	for {
+		// Wait for listener to populate messages
+		err := workflow.Await(ctx, func() bool {
+			return len(l.Messages) > 0
+		})
+		if err != nil {
+			return "", err
+		}
+
+		// Process messages
+		for len(l.Messages) > 0 {
+			var msg string
+			msg, l.Messages = l.Messages[0], l.Messages[1:]
+			logger.Info("Received", "msg", msg)
+			// execute your Activities
+		}
+
+		// TODO add continueAsNew
 	}
-
-	// Handle belated signals
-	messages = []string{}
-	for selector.HasPending() {
-		selector.Select(ctx)
-	}
-
-	// Continue as new by adding messages to a new execution
-	logger.Info("Belated signals", "msg", messages)
-
-	return "done", nil
 }
