@@ -22,7 +22,10 @@ type (
 	ContextKey string
 )
 
-const ClientContextKey ContextKey = "Client"
+const (
+	TaskQueue                   = "mutex_queue"
+	ClientContextKey ContextKey = "Client"
+)
 
 // NewMutex initializes mutex
 func NewMutex(currentWorkflowID string, lockNamespace string) *Mutex {
@@ -93,7 +96,7 @@ func SignalWithStartMutexWorkflowActivity(
 	)
 	workflowOptions := client.StartWorkflowOptions{
 		ID:        workflowID,
-		TaskQueue: "mutex",
+		TaskQueue: TaskQueue,
 		RetryPolicy: &temporal.RetryPolicy{
 			InitialInterval:    time.Second,
 			BackoffCoefficient: 2.0,

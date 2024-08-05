@@ -20,7 +20,7 @@ func main() {
 	}
 	defer c.Close()
 
-	w := worker.New(c, "mutex", worker.Options{
+	w := worker.New(c, mutex.TaskQueue, worker.Options{
 		BackgroundActivityContext: context.WithValue(context.Background(), mutex.ClientContextKey, c),
 	})
 

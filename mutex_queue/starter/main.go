@@ -22,28 +22,26 @@ func main() {
 	}
 	defer c.Close()
 
-	taskQueue := "mutex"
-
 	// This workflow ID can be user business logic identifier as well.
 	resourceID := "mutex_resource"
 	workflow1Options := client.StartWorkflowOptions{
 		ID:        "A_" + uuid.New().String(),
-		TaskQueue: taskQueue,
+		TaskQueue: mutex.TaskQueue,
 	}
 
 	workflow2Options := client.StartWorkflowOptions{
 		ID:        "B_" + uuid.New().String(),
-		TaskQueue: taskQueue,
+		TaskQueue: mutex.TaskQueue,
 	}
 
 	workflow3Options := client.StartWorkflowOptions{
 		ID:        "C_" + uuid.New().String(),
-		TaskQueue: taskQueue,
+		TaskQueue: mutex.TaskQueue,
 	}
 
 	workflow4Options := client.StartWorkflowOptions{
 		ID:        "D_" + uuid.New().String(),
-		TaskQueue: taskQueue,
+		TaskQueue: mutex.TaskQueue,
 	}
 
 	we, err := c.ExecuteWorkflow(context.Background(), workflow1Options, mutex.SampleWorkflowWithMutex, resourceID)
