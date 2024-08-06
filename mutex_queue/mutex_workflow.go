@@ -37,11 +37,11 @@ func MutexWorkflowWithCancellation(
 	for {
 		selector := workflow.NewSelector(ctx)
 		selector.AddReceive(completeCh, func(c workflow.ReceiveChannel, more bool) {
-			c.ReceiveAsync(&done)
+			c.Receive(ctx, &done)
 		})
 		selector.AddReceive(requestLockCh, func(c workflow.ReceiveChannel, more bool) {
 			var senderID string
-			c.ReceiveAsync(&senderID)
+			c.Receive(ctx, &senderID)
 			queue = append(queue, senderID)
 			// Start a goroutine per sender
 			workflow.Go(ctx, func(ctx workflow.Context) {
