@@ -15,13 +15,20 @@ const (
 	RequestLockSignalName = "request-lock-event"
 )
 
+type queuedMutex struct {
+	queue         []string
+	unlockTimeout time.Duration
+}
+
 func MutexWorkflowWithCancellation(
 	ctx workflow.Context,
 	namespace string,
 	resourceID string,
 	unlockTimeout time.Duration,
+	queue []string,
 ) error {
 	logger := workflow.GetLogger(ctx)
+	info := workflow.GetInfo(ctx)
 	currentWorkflowID := workflow.GetInfo(ctx).WorkflowExecution.ID
 	if currentWorkflowID == "default-test-workflow-id" {
 		// unit testing hack, see https://github.com/uber-go/cadence-client/issues/663
@@ -31,8 +38,11 @@ func MutexWorkflowWithCancellation(
 
 	requestLockCh := workflow.GetSignalChannel(ctx, RequestLockSignalName)
 	completeCh := workflow.NewChannel(ctx)
+	q := &queuedMutex{
+		queue:         queue,
+		unlockTimeout: unlockTimeout,
+	}
 	done := false
-	queue := []string{}
 
 	for {
 		selector := workflow.NewSelector(ctx)
@@ -42,37 +52,40 @@ func MutexWorkflowWithCancellation(
 		selector.AddReceive(requestLockCh, func(c workflow.ReceiveChannel, more bool) {
 			var senderID string
 			c.Receive(ctx, &senderID)
-			queue = append(queue, senderID)
-			// Start a goroutine per sender
-			workflow.Go(ctx, func(ctx workflow.Context) {
-				thisSenderID := senderID
-				var index int
-				workflow.Await(ctx, func() bool {
-					index = slices.Index(queue, thisSenderID)
-					isLast := index == len(queue)-1
-					// Block the last element in the queue unless it's the only one left.
-					return !isLast || len(queue) == 1
-				})
-				switch index {
-				case -1:
-					return
-				case 0:
-					unblockSender(ctx, senderID, unlockTimeout)
-				default:
-					cancelSender(ctx, senderID)
-				}
-				// Remove the unblocked or cancelled sender
-				queue = append(queue[:index], queue[index+1:]...)
-				// Try to complete if queue is empty
-				if len(queue) == 0 {
-					completeCh.Send(ctx, true)
-				}
-			})
+			q.queue = append(q.queue, senderID)
+			workflow.Go(ctx, q.processSender(ctx, senderID, completeCh))
 		})
+		if info.GetContinueAsNewSuggested() {
+			return workflow.NewContinueAsNewError(ctx, MutexWorkflowWithCancellation, namespace, resourceID, unlockTimeout, queue)
+		}
 		if done && requestLockCh.Len() == 0 {
 			return nil
 		}
 		selector.Select(ctx)
+	}
+}
+
+func (q *queuedMutex) processSender(ctx workflow.Context, senderID string, completeCh workflow.Channel) func(workflow.Context) {
+	return func(ctx workflow.Context) {
+		var index int
+		workflow.Await(ctx, func() bool {
+			index = slices.Index(q.queue, senderID)
+			isLast := index == len(q.queue)-1
+			// Block the last element in the queue unless it's the only one left.
+			return !isLast || len(q.queue) == 1
+		})
+		if index == 0 {
+			unblockSender(ctx, senderID, q.unlockTimeout)
+		} else {
+			cancelSender(ctx, senderID)
+		}
+		// Remove the unblocked or cancelled sender
+		index = slices.Index(q.queue, senderID) // reindex is needed since other coroutine could have updated the queue
+		q.queue = append(q.queue[:index], q.queue[index+1:]...)
+		// Try to complete if queue is empty
+		if len(q.queue) == 0 {
+			completeCh.Send(ctx, true)
+		}
 	}
 }
 

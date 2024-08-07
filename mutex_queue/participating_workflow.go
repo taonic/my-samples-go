@@ -106,7 +106,7 @@ func SignalWithStartMutexWorkflowActivity(
 	}
 	wr, err := c.SignalWithStartWorkflow(
 		ctx, workflowID, RequestLockSignalName, senderWorkflowID,
-		workflowOptions, MutexWorkflowWithCancellation, namespace, resourceID, unlockTimeout)
+		workflowOptions, MutexWorkflowWithCancellation, namespace, resourceID, unlockTimeout, nil)
 
 	if err != nil {
 		activity.GetLogger(ctx).Error("Unable to signal with start workflow", "Error", err)

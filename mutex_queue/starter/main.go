@@ -22,56 +22,56 @@ func main() {
 	}
 	defer c.Close()
 
-	// This workflow ID can be user business logic identifier as well.
-	resourceID := "mutex_resource"
-	workflow1Options := client.StartWorkflowOptions{
-		ID:        "A_" + uuid.New().String(),
-		TaskQueue: mutex.TaskQueue,
-	}
+	for i := 0; i <= 5; i++ {
+		time.Sleep(500 * time.Millisecond)
+		// This workflow ID can be user business logic identifier as well.
+		resourceID := "mutex_resource"
+		workflow1Options := client.StartWorkflowOptions{
+			ID:        "A_" + uuid.New().String(),
+			TaskQueue: mutex.TaskQueue,
+		}
 
-	workflow2Options := client.StartWorkflowOptions{
-		ID:        "B_" + uuid.New().String(),
-		TaskQueue: mutex.TaskQueue,
-	}
+		workflow2Options := client.StartWorkflowOptions{
+			ID:        "B_" + uuid.New().String(),
+			TaskQueue: mutex.TaskQueue,
+		}
 
-	workflow3Options := client.StartWorkflowOptions{
-		ID:        "C_" + uuid.New().String(),
-		TaskQueue: mutex.TaskQueue,
-	}
+		workflow3Options := client.StartWorkflowOptions{
+			ID:        "C_" + uuid.New().String(),
+			TaskQueue: mutex.TaskQueue,
+		}
 
-	workflow4Options := client.StartWorkflowOptions{
-		ID:        "D_" + uuid.New().String(),
-		TaskQueue: mutex.TaskQueue,
-	}
+		workflow4Options := client.StartWorkflowOptions{
+			ID:        "D_" + uuid.New().String(),
+			TaskQueue: mutex.TaskQueue,
+		}
 
-	we, err := c.ExecuteWorkflow(context.Background(), workflow1Options, mutex.SampleWorkflowWithMutex, resourceID)
-	if err != nil {
-		log.Fatalln("Unable to execute workflow", err)
-	} else {
-		log.Println(fmt.Sprintf("Started workflow [%s]", we.GetID()))
-	}
-	time.Sleep(100 * time.Millisecond)
+		we, err := c.ExecuteWorkflow(context.Background(), workflow1Options, mutex.SampleWorkflowWithMutex, resourceID)
+		if err != nil {
+			log.Fatalln("Unable to execute workflow", err)
+		} else {
+			log.Println(fmt.Sprintf("Started workflow [%s]", we.GetID()))
+		}
 
-	we, err = c.ExecuteWorkflow(context.Background(), workflow2Options, mutex.SampleWorkflowWithMutex, resourceID)
-	if err != nil {
-		log.Fatalln("Unable to execute workflow", err)
-	} else {
-		log.Println(fmt.Sprintf("Started workflow [%s]", we.GetID()))
-	}
-	time.Sleep(100 * time.Millisecond)
+		we, err = c.ExecuteWorkflow(context.Background(), workflow2Options, mutex.SampleWorkflowWithMutex, resourceID)
+		if err != nil {
+			log.Fatalln("Unable to execute workflow", err)
+		} else {
+			log.Println(fmt.Sprintf("Started workflow [%s]", we.GetID()))
+		}
 
-	we, err = c.ExecuteWorkflow(context.Background(), workflow3Options, mutex.SampleWorkflowWithMutex, resourceID)
-	if err != nil {
-		log.Fatalln("Unable to execute workflow", err)
-	} else {
-		log.Println(fmt.Sprintf("Started workflow [%s]", we.GetID()))
-	}
-	time.Sleep(100 * time.Millisecond)
+		we, err = c.ExecuteWorkflow(context.Background(), workflow3Options, mutex.SampleWorkflowWithMutex, resourceID)
+		if err != nil {
+			log.Fatalln("Unable to execute workflow", err)
+		} else {
+			log.Println(fmt.Sprintf("Started workflow [%s]", we.GetID()))
+		}
 
-	we, err = c.ExecuteWorkflow(context.Background(), workflow4Options, mutex.SampleWorkflowWithMutex, resourceID)
-	if err != nil {
-		log.Fatalln("Unable to execute workflow", err)
-	} else {
-		log.Println(fmt.Sprintf("Started workflow [%s]", we.GetID()))
+		we, err = c.ExecuteWorkflow(context.Background(), workflow4Options, mutex.SampleWorkflowWithMutex, resourceID)
+		if err != nil {
+			log.Fatalln("Unable to execute workflow", err)
+		} else {
+			log.Println(fmt.Sprintf("Started workflow [%s]", we.GetID()))
+		}
 	}
 }
