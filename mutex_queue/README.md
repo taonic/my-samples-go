@@ -1,5 +1,5 @@
 Based on the below scenario:
-https://community.temporal.io/t/sharing-discovery-setup-temporal-with-nx-monorepo-and-nest-js/6696/5
+https://community.temporal.io/t/mutex-workflow-and-how-to-track-workflow-that-have-requested-lock/12983
 
 ### Steps to run this sample:
 1) Run a [Temporal service](https://github.com/temporalio/samples-go/tree/main/#how-to-use).
