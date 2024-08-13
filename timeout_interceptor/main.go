@@ -34,10 +34,9 @@ func run() error {
 	var taskQueue = "my-task-queue" + uuid.New().String()
 	w := worker.New(c, taskQueue, worker.Options{
 		Interceptors: []sdkinterceptor.WorkerInterceptor{
-			NewTimeoutInterceptor(3 * time.Second),
+			NewTimeoutInterceptor(5 * time.Second),
 		},
-	},
-	)
+	})
 	w.RegisterWorkflow(MyWorkflow)
 	if err := w.Start(); err != nil {
 		return err
@@ -69,6 +68,7 @@ func MyWorkflow(ctx workflow.Context) error {
 	}()
 
 	for i := 0; i < 5; i++ {
+		time.Sleep(340 * time.Millisecond)
 		workflow.Sleep(ctx, 1*time.Second)
 	}
 	return nil
