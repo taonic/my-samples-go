@@ -6,7 +6,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 
-	"github.com/taonic/my-samples-go/cancellation"
+	cancellation "github.com/taonic/my-samples-go/concurrent_cancel"
 )
 
 // @@@SNIPSTART samples-go-cancellation-worker-starter

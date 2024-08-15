@@ -36,6 +36,8 @@ func YourWorkflow(ctx workflow.Context) error {
 	completeCh := workflow.NewChannel(ctx)
 
 	workflow.Go(ctx, func(ctx workflow.Context) {
+		workflow.GetSignalChannel(ctx, "unblockSignal").Receive(ctx, nil)
+
 		var result string
 		err := workflow.ExecuteActivity(ctx, a.ActivityToBeCanceled).Get(ctx, &result)
 		logger.Info(fmt.Sprintf("ActivityToBeCanceled returns %v, %v", result, err))

@@ -18,7 +18,7 @@ func (a *Activities) ActivityToBeCanceled(ctx context.Context) (string, error) {
 	for {
 		select {
 		case <-time.After(1 * time.Second):
-			if beats > 5 {
+			if beats > 10 {
 				return "I am done", nil
 			}
 			logger.Info("heartbeating...")

@@ -1,4 +1,7 @@
-## Cancellation
+## Concurrent Cancellation
+
+This sample is adapted from https://github.com/temporalio/samples-go/tree/main/cancellation to demonstrate how cancellation can be handle concurrently with blocking Signals and Activities
+
 <!-- @@@SNIPSTART samples-go-cancellation-readme -->
 Make sure the [Temporal Server is running locally](https://docs.temporal.io/application-development/foundations#run-a-development-cluster).
 
