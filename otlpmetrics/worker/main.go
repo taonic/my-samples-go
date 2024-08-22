@@ -2,18 +2,16 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
-	prom "github.com/prometheus/client_golang/prometheus"
-	"github.com/uber-go/tally/v4"
-	"github.com/uber-go/tally/v4/prometheus"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/contrib/opentelemetry"
-	sdktally "go.temporal.io/sdk/contrib/tally"
 	"go.temporal.io/sdk/worker"
 	"google.golang.org/grpc"
 
@@ -41,9 +39,10 @@ func main() {
 			panic(err)
 		}
 	}
-	meterProvider := metric.NewMeterProvider(metric.WithReader(
-		metric.NewPeriodicReader(exp, metric.WithInterval(10*time.Second)),
-	))
+	meterProvider := metric.NewMeterProvider(
+		metric.WithReader(metric.NewPeriodicReader(exp, metric.WithInterval(10*time.Second))),
+		metric.WithView(prefixMetric),
+	)
 	c, err := client.Dial(client.Options{
 		MetricsHandler: opentelemetry.NewMetricsHandler(
 			opentelemetry.MetricsHandlerOptions{
@@ -68,27 +67,12 @@ func main() {
 	}
 }
 
-func newPrometheusScope(c prometheus.Configuration) tally.Scope {
-	reporter, err := c.NewReporter(
-		prometheus.ConfigurationOptions{
-			Registry: prom.NewRegistry(),
-			OnError: func(err error) {
-				log.Println("error in prometheus reporter", err)
-			},
-		},
-	)
-	if err != nil {
-		log.Fatalln("error creating prometheus reporter", err)
+func prefixMetric(i metric.Instrument) (metric.Stream, bool) {
+	s := metric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
+	if strings.Contains(i.Name, "temporal_") {
+		s.Name = fmt.Sprintf("my_%s", i.Name)
+		return s, true
 	}
-	scopeOpts := tally.ScopeOptions{
-		CachedReporter:  reporter,
-		Separator:       prometheus.DefaultSeparator,
-		SanitizeOptions: &sdktally.PrometheusSanitizeOptions,
-		Prefix:          "temporal",
-	}
-	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
-	scope = sdktally.NewPrometheusNamingScope(scope)
 
-	log.Println("prometheus metrics scope created")
-	return scope
+	return s, false
 }
