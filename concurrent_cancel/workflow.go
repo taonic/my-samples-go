@@ -10,7 +10,7 @@ import (
 
 // @@@SNIPSTART samples-go-cancellation-workflow-definition
 // YourWorkflow is a Workflow Definition that shows how it can be canceled.
-func YourWorkflow(ctx workflow.Context) error {
+func YourWorkflow(ctx workflow.Context) (wfErr error) {
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: 30 * time.Minute,
 		HeartbeatTimeout:    5 * time.Second,
@@ -31,6 +31,8 @@ func YourWorkflow(ctx workflow.Context) error {
 		if err != nil {
 			logger.Error("CleanupActivity failed", "Error", err)
 		}
+
+		wfErr = workflow.ErrCanceled
 	}()
 
 	completeCh := workflow.NewChannel(ctx)
