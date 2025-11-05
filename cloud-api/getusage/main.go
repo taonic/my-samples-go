@@ -44,15 +44,15 @@ func main() {
 		log.Fatalf("Failed to get usage: %v", err)
 	}
 
-	fmt.Printf("Usage data from %s to %s:\n", startTime.Format("2006-01-02"), endTime.Format("2006-01-02"))
-	fmt.Printf("Summary: %+v\n", resp.Summary)
+	//fmt.Printf("Usage data from %s to %s:\n", startTime.Format("2006-01-02"), endTime.Format("2006-01-02"))
+	fmt.Printf("Summary: %+v\n", resp)
 
-	if len(resp.UsageByNamespace) > 0 {
-		fmt.Println("\nUsage by namespace:")
-		for _, usage := range resp.UsageByNamespace {
-			fmt.Printf("  Namespace: %s\n", usage.Namespace)
-			fmt.Printf("    Actions: %d\n", usage.Summary.ActionCount)
-			fmt.Printf("    Storage: %d bytes\n", usage.Summary.StorageBytes)
-		}
-	}
+	//if len(resp.UsageByNamespace) > 0 {
+	//fmt.Println("\nUsage by namespace:")
+	//for _, usage := range resp.UsageByNamespace {
+	//fmt.Printf("  Namespace: %s\n", usage.Namespace)
+	//fmt.Printf("    Actions: %d\n", usage.Summary.ActionCount)
+	//fmt.Printf("    Storage: %d bytes\n", usage.Summary.StorageBytes)
+	//}
+	//}
 }
