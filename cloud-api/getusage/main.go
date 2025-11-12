@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"go.temporal.io/cloud-sdk/api/cloudservice/v1"
 	"go.temporal.io/cloud-sdk/cloudclient"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func main() {
@@ -31,15 +29,9 @@ func main() {
 	ctx := context.Background()
 
 	// Get usage for the last 30 days
-	endTime := time.Now()
-	startTime := endTime.AddDate(0, 0, -30)
+	req := &cloudservice.GetNamespaceRequest{}
 
-	req := &cloudservice.GetUsageRequest{
-		StartTimeInclusive: timestamppb.New(startTime),
-		EndTimeExclusive:   timestamppb.New(endTime),
-	}
-
-	resp, err := cloudClient.CloudService().GetUsage(ctx, req)
+	resp, err := cloudClient.CloudService().GetNamespace(ctx, req)
 	if err != nil {
 		log.Fatalf("Failed to get usage: %v", err)
 	}
